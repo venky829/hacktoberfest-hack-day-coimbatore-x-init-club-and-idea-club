@@ -143,13 +143,20 @@ The submitted application should be functional and accessible through the provid
 
 ### AI / Models
 
-- **[Model]:** [How it is used]
+Gemma 4 (31B-IT via Gemini API) : Primary cloud multimodal model used in harness/engine.py for high-resolution vision parsing, text extraction, and structured JSON generation from food packaging photos.
+Gemma 4 (2B / 4B Quantized via Ollama) : Local edge vision model executed directly on consumer GPU hardware (NVIDIA RTX 3050, 6GB VRAM) for offline, zero-latency label extraction.
 
 ### Open Source Components
 
-- **[Library / Framework]:** [Purpose]
-- **[Dataset]:** [Purpose]
-- **[API / Service]:** [Purpose]
+Library / Framework	: google-genai	Official Google SDK used to connect to the Gemini API and invoke Gemma 4 with structured Pydantic schema enforcement.
+Library / Framework	fastapi & uvicorn :	Lightweight REST API backend routing requests between the user interface and the inference harness.
+Library / Framework	streamlit :	Interactive web dashboard providing image upload, camera capture, and visual metric displays.
+Library / Framework	pydantic	Enforces type safety, JSON schema validation, and structured output parsing across the pipeline.
+Library / Framework	pillow (PIL)	Handles image preprocessing, formatting, and file stream conversions before model ingestion.
+Library / Framework	pytest	Automated testing framework for verifying Atwater factor calculations, deceptive ingredient detection, and allergen scanning.
+Specification	Agent Skill Open Standard (agentskills.io)	Open specification governing skills/nutrilens-auditor/SKILL.md structure, parameters, and execution rules.
+API / Service	Google Gemini API	Cloud endpoint providing managed access to Gemma 4 multimodal models.
+API / Service	Ollama	Local open-source model harness and HTTP inference server for running quantized open weights on edge GPUs.
 
 [Include relevant licenses, attribution, and acknowledgements for external components.]
 
