@@ -73,7 +73,24 @@ If a category or technology is not implemented in the project, specify `N/A` ins
 
 ### Technical Decisions
 
-[Explain important architectural, algorithmic, or engineering decisions made during development.]
+1.Hybrid Edge-Cloud Inference (harness/)
+Local First: Runs quantized Gemma 4 (E2B/E4B) on local hardware (RTX 3050, 6GB VRAM) via Ollama for zero-latency, private, offline execution.
+Automatic Failover: Automatically escalates to Gemma 4 (31B) via the Gemini API if local memory limits or blurry text are encountered, preventing demo crashes.
+
+2.Perception vs. Computation Separation (skills/)
+VLM Perception: Gemma 4 acts strictly as an OCR/extractor, outputting raw numerical/ingredient data directly to a structured JSON schema.
+Deterministic Math: Offloads mathematical auditing to Python (macro_verifier.py). Uses the 4:4:9 Atwater Factor System to calculate real calories and catch label discrepancies without LLM math hallucinations.
+
+3.Agent Skill Open Standard Compliance
+Packaged cleanly in skills/nutrilens-auditor/SKILL.md following standard frontmatter rules.
+Uses progressive disclosure—referencing external glycemic index tables (references/) only when needed to keep token costs low.
+
+4.Zero-Conflict 4-Person Modular Workflow
+Strictly isolated directory boundaries so team members work in parallel without Git merge conflicts:
+ui/ (Streamlit) | backend/ (FastAPI) | harness/ (Gemma Engine) | skills/ & tests/ (Skill & Pytest)
+
+5.Fail-Safe Offline Fixtures (fixtures/)
+Includes synthesized mock label images and pre-cached JSON extraction files to ensure 100% demo uptime even if venue Wi-Fi drops.
 
 ## Implementation During the Hackathon
 
