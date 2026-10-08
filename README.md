@@ -1,50 +1,56 @@
 # [Project Name]
 
-> [One-line description of the project and what it does.]
+> [Analyses food product ingredients and gives consumer a report]
 
 ## Team
 
-**Team Name:** [Team Name]
+**Team Name:** [Open Minds]
 
 
 | Member | Contribution   |
 | ------ | -------------- |
-| [Name] | [Contribution] |
-| [Name] | [Contribution] |
-| [Name] | [Contribution] |
-| [Name] | [Contribution] |
+| [Naraen AL] | [Frontend developer] |
+| [Venkatesh ] | [Backend developer] |
+| [Pragnesh] | [setting up harness] |
+| [Gowtham] | [skills and tests] |
 
 
 ## Problem Statement
 
 ### The Problem
 
-[Describe the problem being addressed, who is affected by it, and the context in which it occurs.]
+[Consumers face difficulty understanding complex ingredient lists on packaged food labels. Technical chemical names, hidden additives, and ambiguous E-numbers make it hard for everyday shoppers—especially those with dietary restrictions, allergies, or health conditions—to make informed purchasing decisions.]
 
 ### Why We Chose This Problem
 
-[Explain why the team selected this problem and why solving it is important.]
+[We selected this problem to empower consumers with transparency regarding what they consume daily. Simplifying ingredient lists helps people make safer, healthier food choices quickly while shopping..]
 
 ## Solution
 
-[Describe the proposed solution and how it addresses the problem.]
+[The Food Product Ingredient Analyzer allows users to upload an image or input the text of any food label. The system extracts the ingredients, evaluates potential health risks, identifies hidden additives or allergens, and generates an easy-to-understand consumer summary report..]
 
 ### Key Features
 
-- [Feature 1]
-- [Feature 2]
-- [Feature 3]
-- [Feature 4]
+- [Label OCR & Text Parsing:** Instant extraction of ingredient text from product label photos.]
+- [Health Risk & Safety Breakdown:** Categorizes additives, preservatives, and chemicals as safe, moderate, or high concern.]
+- [Custom Allergen & Diet Alerts:** Flags ingredients matching user preferences (e.g., vegan, gluten-free, nut allergy]
+- [Simplified Consumer Summary:** Translates complex chemical names into plain, readable explanations.]
 
 ## Innovation and Differentiation
 
-[Explain what is innovative about the approach and how it differs from existing or conventional solutions.]
+[Unlike traditional scanner apps that rely solely on static barcode databases, our solution analyzes raw ingredient text directly using OCR and AI. This allows it to evaluate new, unlisted, or local food products in real time without needing a pre-existing product database entry.]
 
 ## Technical Implementation
 
 ### Architecture
 
-[Add the system architecture or workflow Mermaid diagram here.]
+[[User Uploads Label Image / Text] --> B[Frontend Interface]
+    B --> C[Backend API Server]
+    C --> D[OCR Engine / Text Extractor]
+    D --> E[AI Ingredient Analysis Module]
+    E --> F[Ingredient & Safety Database]
+    E --> G[Health & Risk Report Generation]
+    G --> B]
 
 ### Technology Stack
 
@@ -75,10 +81,10 @@ If a category or technology is not implemented in the project, specify `N/A` ins
 
 ### Team Contributions
 
-- **[Member Name]:** [Contribution]
-- **[Member Name]:** [Contribution]
-- **[Member Name]:** [Contribution]
-- **[Member Name]:** [Contribution]
+| [Naraen AL] | [Frontend developer] |
+| [Venkatesh ] | [Backend developer] |
+| [Pragnesh] | [setting up harness] |
+| [Gowtham] | [skills and tests] |
 
 ## Working Application
 
