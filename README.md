@@ -1,6 +1,6 @@
 # [Project Name]
 
-> [Analyses food product ingredients and gives consumer a report]
+> [Nutrilens]
 
 ## Team
 
