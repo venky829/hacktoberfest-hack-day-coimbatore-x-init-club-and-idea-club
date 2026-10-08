@@ -1,17 +1,20 @@
 import os
 import json
-import base64
-import requests
+import time
+from pathlib import Path
 from PIL import Image
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field
+import requests
 from google import genai
 from google.genai import types
-from .gemini_client import GeminiGemmaClient
+from google.genai.errors import ServerError
 from dotenv import load_dotenv
 
-load_dotenv()
+# Ensure .env is explicitly loaded from the root directory
+env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
-# Strict schema for our extracted food label data
+
 class ExtractedNutritionData(BaseModel):
     brand_or_product: str = Field(default="Unknown")
     calories: float = Field(default=0.0)
@@ -21,104 +24,95 @@ class ExtractedNutritionData(BaseModel):
     fat_g: float = Field(default=0.0)
     ingredients: list[str] = Field(default_factory=list)
 
+
 class HybridInferenceHarness:
     def __init__(self):
         self.api_key = os.getenv("GEMINI_API_KEY")
-        self.cloud_model = os.getenv("GEMINI_GEMMA_MODEL", "gemma-4-31b-it")
+        # Define preferred and fallback models
+        self.candidate_models = [
+            os.getenv("GEMINI_GEMMA_MODEL", "gemini-3.8-flash"),
+            "gemini-3.5-flash-lite",
+        ]
         self.local_model = os.getenv("LOCAL_OLLAMA_MODEL", "gemma2:2b")
         self.ollama_url = "http://localhost:11434/api/generate"
 
-        # Initialize the Google GenAI SDK client
-        if self.api_key:
-            self.gemini_client = genai.Client(api_key=self.api_key)
-        else:
-            self.gemini_client = None
+        if not self.api_key:
+            print("⚠️ WARNING: GEMINI_API_KEY is not set in environment or .env!", flush=True)
 
-    def _call_local_ollama(self, image_path: str) -> ExtractedNutritionData:
-        """Runs locally on your RTX 3050 (6GB VRAM) via Ollama."""
-        with open(image_path, "rb") as f:
-            b64_image = base64.b64encode(f.read()).decode("utf-8")
+        self.gemini_client = genai.Client(api_key=self.api_key) if self.api_key else None
 
-        prompt = """
-        Extract the nutrition table and ingredient list from this packaging image.
-        Return strictly valid JSON with these exact keys:
-        {
-          "brand_or_product": "string",
-          "calories": float,
-          "protein_g": float,
-          "carbs_g": float,
-          "fiber_g": float,
-          "fat_g": float,
-          "ingredients": ["string"]
-        }
-        """
-
-        response = requests.post(
-            self.ollama_url,
-            json={
-                "model": self.local_model,
-                "prompt": prompt,
-                "images": [b64_image],
-                "format": "json",
-                "stream": False
-            },
-            timeout=25
-        )
-
-        if response.status_code != 200:
-            raise RuntimeError(f"Ollama server error: {response.text}")
-
-        raw_json_str = response.json().get("response", "{}")
-        parsed = json.loads(raw_json_str)
-        return ExtractedNutritionData.model_validate(parsed)
-
-    def _call_gemini_cloud_api(self, image_path: str) -> ExtractedNutritionData:
-        """Calls Gemma 4 through the official Gemini API."""
+    def _call_gemini_multimodal(self, image_path: str) -> ExtractedNutritionData:
+        """Uses Multimodal API to parse the food label into structured JSON with 503 retry & fallback."""
         if not self.gemini_client:
-            raise ValueError("GEMINI_API_KEY is missing from environment (.env).")
+            raise ValueError("GEMINI_API_KEY is missing or invalid. Check your .env file.")
 
         img = Image.open(image_path)
         prompt = (
-            "Extract the product name, calories, protein_g, carbs_g, fiber_g, fat_g, "
-            "and all listed ingredients from this packaging label image into structured JSON."
+            "Analyze this food packaging or nutrition label carefully. "
+            "Extract: product name, calories, protein_g, carbs_g, fiber_g, fat_g, "
+            "and all listed ingredients."
         )
 
-        response = self.gemini_client.models.generate_content(
-            model=self.cloud_model,
-            contents=[prompt, img],
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=ExtractedNutritionData,
-                temperature=0.1
-            )
-        )
-        return ExtractedNutritionData.model_validate_json(response.text)
+        last_error = None
+        for model_name in self.candidate_models:
+            for attempt in range(2):
+                try:
+                    print(f"☁️ [API Call] Calling {model_name} (Attempt {attempt + 1})...", flush=True)
+                    response = self.gemini_client.models.generate_content(
+                        model=model_name,
+                        contents=[prompt, img],
+                        config=types.GenerateContentConfig(
+                            response_mime_type="application/json",
+                            response_schema=ExtractedNutritionData,
+                            temperature=0.1,
+                        ),
+                    )
+                    return ExtractedNutritionData.model_validate_json(response.text)
+                except ServerError as err:
+                    print(f"⚠️ {model_name} high demand (503): {err}. Retrying...", flush=True)
+                    last_error = err
+                    time.sleep(1.5)
+                except Exception as err:
+                    print(f"⚠️ {model_name} error: {err}. Cascading to next candidate...", flush=True)
+                    last_error = err
+                    break
 
-    # ==============================================================
-    # THE SWITCHING MECHANISM
-    # ==============================================================
-    def process_image(self, image_path: str, force_cloud: bool = False) -> tuple[dict, str]:
-        """
-        Routes the task intelligently:
-        1. If force_cloud is True -> routes straight to Gemini API.
-        2. Otherwise -> executes on local GPU (RTX 3050).
-        3. If local execution fails or yields invalid schema -> automatically falls back to Gemini API.
-        """
-        # Manual Override Route
-        if force_cloud:
-            print("🌐 [Route: Cloud API] User forced Cloud Gemma 4 execution.")
-            result = self._call_gemini_cloud_api(image_path)
-            return result.model_dump(), "Cloud (Gemma 4 Gemini API)"
+        raise RuntimeError(f"All multimodal endpoints unavailable: {last_error}")
 
-        # Local First Route
+    def _call_local_gemma_audit(self, extracted: dict) -> dict:
+        """Runs offline text analysis on local RTX 3050 using Gemma 2B."""
+        prompt = f"""
+        Audit these nutritional facts:
+        {json.dumps(extracted)}
+
+        Analyze if ingredients contain hidden sugars (maltodextrin, dextrose, syrups).
+        Output short findings.
+        """
         try:
-            print(f"⚡ [Route: Edge GPU] Attempting local inference via Ollama ({self.local_model})...")
-            result = self._call_local_ollama(image_path)
-            return result.model_dump(), "Edge (RTX 3050 Local Ollama)"
+            res = requests.post(
+                self.ollama_url,
+                json={
+                    "model": self.local_model,
+                    "prompt": prompt,
+                    "stream": False,
+                },
+                timeout=15,
+            )
+            if res.status_code == 200:
+                return {"local_analysis": res.json().get("response", "")}
+        except Exception as e:
+            print(f"Local Ollama audit skipped: {e}", flush=True)
+        return {}
 
-        except (requests.exceptions.RequestException, json.JSONDecodeError, ValidationError, RuntimeError) as err:
-            # Fallback Route
-            print(f"⚠️ [Switching Triggered] Local inference failed or schema incomplete: {err}")
-            print(f"🚀 [Route: Failover] Escalating to Cloud Gemma 4 via Gemini API...")
-            result = self._call_gemini_cloud_api(image_path)
-            return result.model_dump(), "Cloud Fallback (Gemma 4 Gemini API)"
+    def process_image(self, image_path: str, force_cloud: bool = False) -> tuple[dict, str]:
+        print("☁️ [Multimodal Vision] Extracting label metadata via API...", flush=True)
+        extracted_model = self._call_gemini_multimodal(image_path)
+        extracted_data = extracted_model.model_dump()
+
+        # Run local agent processing on your RTX 3050
+        print("⚡ [Local GPU Engine] Verifying formulation locally on RTX 3050 (gemma2:2b)...", flush=True)
+        local_feedback = self._call_local_gemma_audit(extracted_data)
+        extracted_data.update(local_feedback)
+
+        execution_source = "Hybrid (Gemma Multimodal Vision + Local RTX 3050 gemma2:2b)"
+        return extracted_data, execution_source
