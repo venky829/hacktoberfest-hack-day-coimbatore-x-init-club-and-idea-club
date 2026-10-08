@@ -99,8 +99,24 @@ ui/ (Streamlit) | backend/ (FastAPI) | harness/ (Gemma Engine) | skills/ & tests
 Includes synthesized mock label images and pre-cached JSON extraction files to ensure 100% demo uptime even if venue Wi-Fi drops.
 
 ## Implementation During the Hackathon
+During Hack Day, the team built NutriLens—an open-source, edge-first Agent Skill powered by multimodal Gemma 4 that audits packaged food labels for mathematical inaccuracies and deceptive marketing claims.
+[1. Dual-Engine Inference Harness (harness/)
+Edge Mode: Quantized Gemma 4 (E2B/E4B) running locally via Ollama on an RTX 3050 (6GB VRAM) for offline execution.
+Cloud Failover: Dynamic fallback to Gemma 4 (31B) via Gemini API for high-resolution or curved labels.
 
-[Describe what the team built during the Hack Day and the major functionality or components completed during the event.]
+2. Deterministic Agent Skill Engine (skills/)
+Open Standard Compliant: Structured under the agentskills.io specification in SKILL.md.
+Atwater Math Verification: Python script (macro_verifier.py) calculating true calories via (P×4)+(Net C×4)+(Fiber×2)+(F×9) to catch label rounding errors without LLM math hallucinations.
+Deceptive Filler Detection: Cross-references ingredients against references/glycemic_index.json to flag hidden high-GI sugars (e.g., maltodextrin).
+
+3. FastAPI Backend (backend/)
+Created POST /api/audit to bridge image ingestion, Gemma 4 extraction, and skill script execution.
+
+4. Streamlit Dashboard (ui/)
+Built an interactive frontend with webcam/file upload, inference toggles, and live Claim Integrity Score (0–100) displays.
+
+5. CI/CD & Demo Fixtures (fixtures/, tests/)
+Set up GitHub Actions CI (test.yml), Pytest suites, and offline mock label images for demo reliability.]
 
 ### Team Contributions
 
