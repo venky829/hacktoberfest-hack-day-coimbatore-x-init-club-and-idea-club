@@ -69,7 +69,13 @@ If a category or technology is not implemented in the project, specify `N/A` ins
 
 ### How It Works
 
-[Explain the major components of the system and how they interact.]
+[1. User Interface (ui/app.py): Streamlit dashboard. Handles webcam/file inputs, engine toggles, and displays audit scorecards.
+
+2. Backend Router (backend/main.py): FastAPI gateway. Manages image ingestion, coordinates model extraction, and passes data to verification scripts.
+
+3. Inference Harness (harness/engine.py): Dual-mode VLM parser. Runs Gemma 4 E2B/E4B locally (Ollama on RTX 3050) with failover to Gemma 4 31B (Cloud Gemini API). Enforces JSON output.
+
+4. Agent Skill Engine (skills/): Agent Skill Open Standard container. Houses SKILL.md, deterministic Atwater math scripts (macro_verifier.py), and sweetener lookups (references/).]
 
 ### Technical Decisions
 
