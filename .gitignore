@@ -1,0 +1,31 @@
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment secrets and API keys
+.env
+.env.*
+!.env.example
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Streamlit temporary data and caches
+.streamlit/secrets.toml
+
+# OS or editor artifacts
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Temporary images and logs
+temp_*
+*.log
