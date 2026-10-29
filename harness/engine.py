@@ -30,8 +30,9 @@ class HybridInferenceHarness:
         self.api_key = os.getenv("GEMINI_API_KEY")
         # Define preferred and fallback models
         self.candidate_models = [
-            os.getenv("GEMINI_GEMMA_MODEL", "gemini-3.8-flash"),
+            os.getenv("GEMINI_GEMMA_MODEL", "gemini-3.5-flash-lite"),
             "gemini-3.5-flash-lite",
+            "gemini-3.8-flash",
         ]
         self.local_model = os.getenv("LOCAL_OLLAMA_MODEL", "gemma2:2b")
         self.ollama_url = "http://localhost:11434/api/generate"
@@ -95,8 +96,12 @@ class HybridInferenceHarness:
                     "model": self.local_model,
                     "prompt": prompt,
                     "stream": False,
+                    "options": {
+                        "num_predict": 80,       # Caps token length so it finishes rapidly
+                        "temperature": 0.2
+                    }
                 },
-                timeout=15,
+                timeout=45,
             )
             if res.status_code == 200:
                 return {"local_analysis": res.json().get("response", "")}
